@@ -1,0 +1,38 @@
+pc:
+	@echo "Deploy to PC Server!"
+	GOOS=windows GOARCH=amd64 go build -o goFiber.exe main.go || { echo "PC compilation failed"; exit 1; }
+	@echo "PC compilation succeeded"
+	upx -9 goFiber.exe || { echo "PC compression failed"; exit 1; }
+	@echo "PC compression succeeded"
+	sleep 2
+	ssh sheng@192.168.2.18 'taskkill /F /IM goFiber.exe' || { echo "Failed to kill goFiber.exe on PC server"; exit 1; }
+	@echo "Killed goFiber.exe on PC server"
+	ssh sheng@192.168.2.18 'Remove-Item app/goFiber.exe -Force' || { echo "Failed to remove goFiber.exe on PC server"; exit 1; }
+	@echo "Removed goFiber.exe on PC server"
+	scp goFiber.exe sheng@192.168.2.18:app/goFiber.exe || { echo "Failed to copy goFiber.exe to PC server"; exit 1; }
+	@echo "Copied goFiber.exe to PC server"
+	ssh sheng@192.168.2.18 'app/goFiber.exe' || { echo "Failed to start goFiber.exe on PC server"; exit 1; }
+	@echo "Started goFiber.exe on PC server"
+
+arm:
+	@echo "Deploying to ARM64"
+	CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 go build -ldflags '-extldflags "-static"' -o goFiber main.go || { echo "ARM64 compilation failed"; exit 1; }
+	@echo "ARM64 compilation succeeded"
+	sleep 3
+	ssh openailab@192.168.3.173 'killall goFiber' || echo "Failed to kill goFiber on ARM64 server"
+	@echo "Killed goFiber on ARM64 server"
+	scp goFiber openailab@192.168.3.173:~/app/goFiber || { echo "Failed to copy goFiber to ARM64 server"; exit 1; }
+	@echo "Copied goFiber to ARM64 server"
+	ssh openailab@192.168.3.173 '~/app/goFiber &' || { echo "Failed to start goFiber on ARM64 server"; exit 1; }
+	@echo "Started goFiber on ARM64 server"
+
+clean:
+	rm -rf goFiber.exe
+	rm -rf goFiber
+	@echo "Cleaned up build files"
+
+test_pc:
+	@for i in $$(seq 1 10000); do \
+			echo -n $$i && echo -n " " && curl 192.168.2.18:9000; \
+			echo; \
+	done
