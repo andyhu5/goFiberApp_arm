@@ -1,11 +1,8 @@
 pc:
 	@echo "Deploy to PC Server!"
-	export GOOS=windows
-	export GOARCH=amd64
-
 
 	# 进行编译
-	go build -ldflags="-s -w " -o goFiber.exe main.go
+	GOOS=windows GOARCH=amd64 go build -o goFiber.exe main.go
 	# 进行压缩
 	upx -9 goFiber.exe
 	sleep 2
